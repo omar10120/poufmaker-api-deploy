@@ -14,8 +14,10 @@ const swaggerDefinition = {
   
   const options = {
     swaggerDefinition,
-    apis: ["./app/api/**/*.ts"], // Matches all API route files
+    apis: ["./src/app/api/**/*.ts", "./src/app/api/**/*.js"], // ✅ Adjusted for production
   };
+  
+
   
   export default options;
   
