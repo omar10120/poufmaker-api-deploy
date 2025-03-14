@@ -13,14 +13,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    
-    "module": "CommonJS", // Ensure it's CommonJS
-    "moduleResolution": "Node",
-    "target": "ESNext",
     "outDir": "dist",
-    "resolveJsonModule": true,
-    "esModuleInterop": true, // Allows imports
-    "strict": true,
+    "allowSyntheticDefaultImports": true,
     "plugins": [
       {
         "name": "next"

@@ -14,11 +14,12 @@ const swaggerDefinition = {
   
   const options = {
     swaggerDefinition,
-    apis: ["./app/api/**/*.ts", "./app/api/**/*.js"], // ✅ Adjusted for production
+    apis: ["./app/api/**/*.ts", "./app/api/**/*.js"],
   };
   
 
   
-  export = options; // TypeScript's CommonJS export
+  export default options;
+module.exports = options;
 
   
