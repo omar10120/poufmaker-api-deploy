@@ -14,12 +14,10 @@ const swaggerDefinition = {
   
   const options = {
     swaggerDefinition,
-    apis: ["./app/api/**/*.ts", "./app/api/**/*.js"],
+    apis: ["./app/api/**/*.ts", "./app/api/**/*.js"], // ✅ Adjusted for production
   };
   
 
   
-module.exports = options;
-
-
+  module.exports = options;
   
