@@ -18,6 +18,4 @@ const swaggerDefinition = {
   };
   
 
-  
-  module.exports = options;
-  
+  export = options; // TypeScript's CommonJS export
