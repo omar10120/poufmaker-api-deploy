@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "generate-swagger": "ts-node app/api/swagger/scripts/generate-swagger.ts"
-  },
+  "dev": "next dev",
+  "build": "npm run generate-swagger && next build",
+  "start": "next start",
+  "lint": "next lint",
+  "generate-swagger": "ts-node app/api/swagger/scripts/generate-swagger.ts"
+},
   "dependencies": {
     "next": "15.2.2",
     "react": "^18.3.1",

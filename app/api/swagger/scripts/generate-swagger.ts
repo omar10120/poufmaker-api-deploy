@@ -1,12 +1,11 @@
-import fs from "fs";
-import path from "path";
-import swaggerJSDoc from "swagger-jsdoc";
-import swaggerConfig from "../swaggerConfig"; // Adjust the path if needed
+const swaggerJsdoc = require("swagger-jsdoc");
+const fs = require("fs");
+const path = require("path");
+const swaggerConfig = require("../swaggerConfig"); // Import as CommonJS
 
-const swaggerSpec = swaggerJSDoc(swaggerConfig);
+const swaggerSpec = swaggerJsdoc(swaggerConfig);
 
-// Ensure `public/` exists
 const outputPath = path.resolve(process.cwd(), "public/openapi.json");
 fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2));
 
-console.log("✅ Swagger documentation generated successfully!");
+console.log("✅ Swagger documentation generated at:", outputPath);

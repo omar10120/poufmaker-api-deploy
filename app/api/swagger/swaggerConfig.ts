@@ -19,5 +19,6 @@ const swaggerDefinition = {
   
 
   
-  export default options;
+  export = options; // TypeScript's CommonJS export
+
   
