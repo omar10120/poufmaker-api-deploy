@@ -19,7 +19,7 @@ const swaggerDefinition = {
   
 
   
-  export default options;
 module.exports = options;
+
 
   
