@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import "swagger-ui-react/swagger-ui.css";
 
 // Dynamically import Swagger UI (avoids SSR issues)
 const SwaggerUI = dynamic(() => import("swagger-ui-react") as any, { ssr: false });
