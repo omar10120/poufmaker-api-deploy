@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import swaggerJSDoc from "swagger-jsdoc";
-import swaggerConfig from "../swaggerConfig"; // Adjust the path if needed
+import swaggerConfig from "../api/swagger/swaggerConfig"; // Adjust the path if needed
 
 const swaggerSpec = swaggerJSDoc(swaggerConfig);
 
