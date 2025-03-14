@@ -7,7 +7,7 @@ const swaggerDefinition = {
     },
     servers: [
       {
-        url: "http://localhost:3000", // Update with your deployment URL
+        url: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000", // Update with your deployment URL
       },
     ],
   };
