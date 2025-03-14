@@ -14,7 +14,7 @@ const swaggerDefinition = {
   
   const options = {
     swaggerDefinition,
-    apis: ["./src/app/api/**/*.ts", "./src/app/api/**/*.js"], // ✅ Adjusted for production
+    apis: ["./app/api/**/*.ts", "./app/api/**/*.js"], // ✅ Adjusted for production
   };
   
 
