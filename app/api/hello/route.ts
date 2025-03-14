@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 /**
  * @swagger
- * /api/swagger/hello:
+ * /api/hello:
  *   get:
  *     summary: Returns a greeting message
  *     responses:

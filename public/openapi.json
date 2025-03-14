@@ -11,7 +11,7 @@
     }
   ],
   "paths": {
-    "/api/swagger/hello": {
+    "/api/hello": {
       "get": {
         "summary": "Returns a greeting message",
         "responses": {
