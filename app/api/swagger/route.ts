@@ -1,9 +1,22 @@
-import { NextResponse } from "next/server";
-import swaggerJsdoc from "swagger-jsdoc";
-import options from "../../lib/swagger";
+import { NextRequest, NextResponse } from "next/server";
+import { swaggerDefinition } from "./swaggerConfig";
 
-const specs = swaggerJsdoc(options);
-
-export async function GET() {
-  return NextResponse.json(specs);
+/**
+ * @swagger
+ * /api/swagger:
+ *   get:
+ *     summary: Get OpenAPI specification
+ *     description: Returns the OpenAPI specification for the API
+ *     responses:
+ *       200:
+ *         description: OpenAPI specification in JSON format
+ */
+export async function GET(request: NextRequest) {
+  return NextResponse.json(swaggerDefinition, {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store, max-age=0",
+    },
+  });
 }

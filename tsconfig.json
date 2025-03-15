@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "es2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -13,14 +13,6 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    
-    "module": "CommonJS", // Ensure it's CommonJS
-    "moduleResolution": "Node",
-    "target": "ESNext",
-    "outDir": "dist",
-    "resolveJsonModule": true,
-    "esModuleInterop": true, // Allows imports
-    "strict": true,
     "plugins": [
       {
         "name": "next"

@@ -2,20 +2,22 @@
   "name": "poufmaker-api-deploy",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "npm run generate-swagger && next build",
     "start": "next start",
     "lint": "next lint",
-    "generate-swagger": "ts-node app/api/swagger/scripts/generate-swagger.ts"
+    "generate-swagger": "cross-env NODE_OPTIONS=--experimental-loader=ts-node/esm ts-node app/api/swagger/scripts/generate-swagger.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^5.10.2",
+    "@types/swagger-ui-react": "^5.18.0",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.13.0",
     "next": "15.2.2",
-    "prisma": "^6.5.0",
+    "prisma": "^5.10.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "swagger-jsdoc": "^6.2.8",
@@ -32,6 +34,7 @@
     "@types/react-dom": "^19",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "cross-env": "^7.0.3",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
