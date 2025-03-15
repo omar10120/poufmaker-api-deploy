@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run generate-swagger && next build",
+    "build": "prisma generate && npm run generate-swagger && next build",
     "start": "next start",
     "lint": "next lint",
-    "generate-swagger": "cross-env NODE_OPTIONS=--experimental-loader=ts-node/esm ts-node app/api/swagger/scripts/generate-swagger.ts"
+    "generate-swagger": "cross-env NODE_OPTIONS=--experimental-loader=ts-node/esm ts-node app/api/swagger/scripts/generate-swagger.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
@@ -38,5 +39,8 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }
