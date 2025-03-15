@@ -1,14 +1,116 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model bids {
+  Id            String    @id @db.Char(36)
+  ProductId     String    @db.Char(36)
+  UpholstererId String    @db.Char(36)
+  Amount        Decimal   @db.Decimal(10, 2)
+  Status        String    @default("pending") @db.VarChar(50)
+  Notes         String?   @db.Text
+  CreatedAt     DateTime? @default(now()) @db.Timestamp(0)
+  UpdatedAt     DateTime? @default(now()) @db.Timestamp(0)
+  products      products  @relation(fields: [ProductId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "bids_ibfk_1")
+  users         users     @relation(fields: [UpholstererId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "bids_ibfk_2")
+
+  @@index([ProductId], map: "ProductId")
+  @@index([UpholstererId], map: "UpholstererId")
+}
+
+model conversations {
+  Id        String     @id @db.Char(36)
+  UserId    String?    @db.Char(36)
+  UserName  String?    @db.VarChar(255)
+  UserPhone String?    @db.VarChar(20)
+  CreatedAt DateTime?  @default(now()) @db.Timestamp(0)
+  UpdatedAt DateTime?  @default(now()) @db.Timestamp(0)
+  users     users?     @relation(fields: [UserId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "conversations_ibfk_1")
+  messages  messages[]
+
+  @@index([UserId], map: "UserId")
+}
+
+model messages {
+  Id             String        @id @db.Char(36)
+  ConversationId String        @db.Char(36)
+  Content        String        @db.Text
+  IsUser         Boolean
+  CreatedAt      DateTime?     @default(now()) @db.Timestamp(0)
+  conversations  conversations @relation(fields: [ConversationId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "messages_ibfk_1")
+
+  @@index([ConversationId], map: "ConversationId")
+}
+
+model products {
+  Id                                   String    @id @db.Char(36)
+  Title                                String    @db.VarChar(255)
+  Description                          String?   @db.Text
+  Price                                Decimal?  @db.Decimal(10, 2)
+  ImageUrl                             String?   @db.VarChar(500)
+  Status                               String    @default("ai-generated") @db.VarChar(50)
+  CreatorId                            String    @db.Char(36)
+  ManufacturerId                       String?   @db.Char(36)
+  CreatedAt                            DateTime? @default(now()) @db.Timestamp(0)
+  UpdatedAt                            DateTime? @default(now()) @db.Timestamp(0)
+  bids                                 bids[]
+  users_products_CreatorIdTousers      users     @relation("products_CreatorIdTousers", fields: [CreatorId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "products_ibfk_1")
+  users_products_ManufacturerIdTousers users?    @relation("products_ManufacturerIdTousers", fields: [ManufacturerId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "products_ibfk_2")
+
+  @@index([CreatorId], map: "CreatorId")
+  @@index([ManufacturerId], map: "ManufacturerId")
+}
+
+model userloginhistory {
+  Id            String    @id @db.Char(36)
+  UserId        String    @db.Char(36)
+  LoginDate     DateTime? @default(now()) @db.Timestamp(0)
+  IpAddress     String?   @db.VarChar(50)
+  UserAgent     String?   @db.VarChar(500)
+  Successful    Boolean
+  FailureReason String?   @db.VarChar(255)
+  users         users     @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "userloginhistory_ibfk_1")
+
+  @@index([UserId], map: "UserId")
+}
+
+model users {
+  Id                                      String             @id @db.Char(36)
+  FullName                                String             @db.VarChar(255)
+  Email                                   String             @unique(map: "Email") @db.VarChar(255)
+  PhoneNumber                             String?            @db.VarChar(20)
+  PasswordHash                            String             @db.VarChar(255)
+  PasswordSalt                            String             @db.VarChar(255)
+  Role                                    String             @default("client") @db.VarChar(20)
+  EmailConfirmed                          Boolean            @default(false)
+  ConfirmationToken                       String?            @db.Char(36)
+  ResetPasswordToken                      String?            @db.Char(36)
+  ResetPasswordExpiry                     DateTime?          @db.DateTime(0)
+  LastLoginDate                           DateTime?          @db.DateTime(0)
+  CreatedAt                               DateTime?          @default(now()) @db.Timestamp(0)
+  UpdatedAt                               DateTime?          @default(now()) @db.Timestamp(0)
+  bids                                    bids[]
+  conversations                           conversations[]
+  products_products_CreatorIdTousers      products[]         @relation("products_CreatorIdTousers")
+  products_products_ManufacturerIdTousers products[]         @relation("products_ManufacturerIdTousers")
+  userloginhistory                        userloginhistory[]
+  usersessions                            usersessions[]
+}
+
+model usersessions {
+  Id        String    @id @db.Char(36)
+  UserId    String    @db.Char(36)
+  Token     String    @unique(map: "Token") @db.VarChar(255)
+  ExpiresAt DateTime  @db.DateTime(0)
+  CreatedAt DateTime? @default(now()) @db.Timestamp(0)
+  IpAddress String?   @db.VarChar(50)
+  UserAgent String?   @db.VarChar(500)
+  users     users     @relation(fields: [UserId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "usersessions_ibfk_1")
+
+  @@index([UserId], map: "UserId")
 }
