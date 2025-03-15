@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
-import crypto from "crypto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+
+const loginSchema = z.object({
+  Email: z.string().email("Invalid email format"),
+  Password: z.string().min(1, "Password is required"),
+});
 
 /**
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Authenticate user and return JWT token
- *     description: Logs in a user and returns a JWT token for authentication
  *     tags:
  *       - Auth
+ *     summary: Login user
+ *     description: Authenticate a user and return a JWT token
  *     requestBody:
  *       required: true
  *       content:
@@ -20,20 +26,18 @@ import crypto from "crypto";
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - Email
+ *               - Password
  *             properties:
- *               email:
+ *               Email:
  *                 type: string
  *                 format: email
- *                 example: "johndoe@example.com"
- *               password:
+ *               Password:
  *                 type: string
  *                 format: password
- *                 example: "securepassword"
  *     responses:
  *       200:
- *         description: Successfully authenticated
+ *         description: Login successful
  *         content:
  *           application/json:
  *             schema:
@@ -52,39 +56,37 @@ import crypto from "crypto";
  *                       type: string
  *                     Role:
  *                       type: string
+ *                     PhoneNumber:
+ *                       type: string
  *       400:
- *         description: Invalid input data
+ *         description: Invalid input
  *       401:
  *         description: Invalid credentials
+ *       500:
+ *         description: Server error
  */
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(1, "Password is required"),
-});
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("Login attempt for email:", body.email);
 
-    const { email, password } = loginSchema.parse(body);
+    // Validate input
+    const validatedData = loginSchema.parse(body);
+    const { Email, Password } = validatedData;
 
     // Find user by email
     const user = await prisma.users.findUnique({
-      where: { Email: email },
+      where: { Email },
       select: {
         Id: true,
         Email: true,
         FullName: true,
-        Role: true,
         PasswordHash: true,
-        PasswordSalt: true,
+        Role: true,
+        PhoneNumber: true,
       },
     });
 
     if (!user) {
-      console.log("User not found:", email);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -92,83 +94,108 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.PasswordHash);
-    if (!isValidPassword) {
-      console.log("Invalid password for user:", email);
+    const validPassword = await bcrypt.compare(Password, user.PasswordHash);
+    if (!validPassword) {
+      // Get client IP from headers
+      const forwardedFor = request.headers.get("x-forwarded-for");
+      const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
+
+      try {
+        // Log failed login attempt
+        await prisma.userloginhistory.create({
+          data: {
+            Id: uuidv4(),
+            UserId: user.Id,
+            Successful: false,
+            FailureReason: "Invalid password",
+            IpAddress: clientIp,
+            UserAgent: request.headers.get("user-agent") || "",
+          },
+        });
+      } catch (loggingError: unknown) {
+        console.error("Error logging failed login attempt:", loggingError);
+        // Continue with the response even if logging fails
+      }
+
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
     }
 
-    // Update last login date
-    await prisma.users.update({
-      where: { Id: user.Id },
-      data: { LastLoginDate: new Date() },
-    });
-
-    // Generate JWT token
+    // Create JWT token
     const token = jwt.sign(
       {
         userId: user.Id,
         email: user.Email,
         role: user.Role,
       },
-      process.env.JWT_SECRET || "your-secret-key",
+      process.env.JWT_SECRET || "",
       { expiresIn: "24h" }
     );
 
-    // Get client IP address from headers
+    // Get client IP for logging
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-    // Create user session
-    await prisma.usersessions.create({
-      data: {
-        Id: crypto.randomUUID(),
-        UserId: user.Id,
-        Token: token,
-        ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        IpAddress: clientIp,
-        UserAgent: request.headers.get("user-agent") || "unknown",
-      },
-    });
+    try {
+      // Create user session
+      await prisma.usersessions.create({
+        data: {
+          Id: uuidv4(),
+          UserId: user.Id,
+          Token: token,
+          ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          IpAddress: clientIp,
+          UserAgent: request.headers.get("user-agent") || "",
+        },
+      });
 
-    // Create login history entry
-    await prisma.userloginhistory.create({
-      data: {
-        Id: crypto.randomUUID(),
-        UserId: user.Id,
-        LoginDate: new Date(),
-        IpAddress: clientIp,
-        UserAgent: request.headers.get("user-agent") || "unknown",
-        Successful: true,
-      },
-    });
+      // Log successful login
+      await prisma.userloginhistory.create({
+        data: {
+          Id: uuidv4(),
+          UserId: user.Id,
+          Successful: true,
+          IpAddress: clientIp,
+          UserAgent: request.headers.get("user-agent") || "",
+        },
+      });
 
-    console.log("Login successful for user:", email);
+      // Update last login date
+      await prisma.users.update({
+        where: { Id: user.Id },
+        data: { LastLoginDate: new Date() },
+      });
+    } catch (loggingError: unknown) {
+      console.error("Error creating session or updating login info:", loggingError);
+      // Continue with the response even if logging fails
+    }
 
+    const { PasswordHash, ...userWithoutPassword } = user;
     return NextResponse.json({
       token,
-      user: {
-        Id: user.Id,
-        Email: user.Email,
-        FullName: user.FullName,
-        Role: user.Role,
-      },
+      user: userWithoutPassword,
     });
-  } catch (error) {
-    console.error("Login error:", error);
+  } catch (loginError: unknown) {
+    console.error("Login error:", loginError);
 
-    if (error instanceof z.ZodError) {
+    if (loginError instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: loginError.errors[0].message },
         { status: 400 }
       );
     }
 
+    if (loginError instanceof PrismaClientKnownRequestError) {
+      return NextResponse.json(
+        { error: "Database error occurred" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

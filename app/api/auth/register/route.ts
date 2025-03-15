@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
-import crypto from "crypto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+
+const registerSchema = z.object({
+  Email: z.string().email("Invalid email format"),
+  Password: z.string().min(8, "Password must be at least 8 characters"),
+  FullName: z.string().min(1, "Full name is required"),
+  PhoneNumber: z.string().optional(),
+  Role: z.enum(["client", "admin", "upholsterer"]).default("client"),
+});
 
 /**
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Register a new user
- *     description: Creates a new user in the database
  *     tags:
  *       - Auth
+ *     summary: Register new user
+ *     description: Create a new user account and return authentication token
  *     requestBody:
  *       required: true
  *       content:
@@ -19,99 +29,90 @@ import crypto from "crypto";
  *           schema:
  *             type: object
  *             required:
- *               - fullName
- *               - email
- *               - password
+ *               - Email
+ *               - Password
+ *               - FullName
  *             properties:
- *               fullName:
- *                 type: string
- *                 example: "John Doe"
- *               email:
+ *               Email:
  *                 type: string
  *                 format: email
- *                 example: "johndoe@example.com"
- *               password:
+ *               Password:
  *                 type: string
  *                 format: password
- *                 example: "securepassword"
- *               phoneNumber:
+ *                 minLength: 8
+ *               FullName:
  *                 type: string
- *                 example: "1234567890"
+ *               PhoneNumber:
+ *                 type: string
+ *               Role:
+ *                 type: string
+ *                 enum: [client, admin, upholsterer]
+ *                 default: client
  *     responses:
- *       201:
- *         description: User registered successfully
+ *       200:
+ *         description: User successfully registered
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 message:
+ *                 token:
  *                   type: string
  *                 user:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     Id:
  *                       type: string
- *                     email:
+ *                     Email:
  *                       type: string
- *                     fullName:
+ *                     FullName:
  *                       type: string
- *                     role:
+ *                     Role:
+ *                       type: string
+ *                     PhoneNumber:
  *                       type: string
  *       400:
- *         description: Validation error or user already exists
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
+ *         description: Invalid input or email already exists
+ *       500:
+ *         description: Server error
  */
-
-const registerSchema = z.object({
-  fullName: z.string().min(1, "Full name is required"),
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  phoneNumber: z.string().optional(),
-});
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("Register request body:", body);
-
-    const { fullName, email, password, phoneNumber } = registerSchema.parse(body);
+    
+    // Validate input
+    const validatedData = registerSchema.parse(body);
+    const { Email, Password, FullName, PhoneNumber, Role } = validatedData;
 
     // Check if user already exists
     const existingUser = await prisma.users.findUnique({
-      where: { Email: email },
-      select: { Email: true },
+      where: { Email },
+      select: { Id: true },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "Email already registered" },
         { status: 400 }
       );
     }
 
-    // Generate salt and hash password
+    // Hash password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(Password, salt);
 
-    // Create new user
+    // Create user
     const user = await prisma.users.create({
       data: {
-        Id: crypto.randomUUID(),
-        FullName: fullName,
-        Email: email,
-        PhoneNumber: phoneNumber,
+        Id: uuidv4(),
+        Email,
+        FullName,
+        PhoneNumber,
+        Role,
         PasswordHash: hashedPassword,
         PasswordSalt: salt,
-        Role: "client",
         EmailConfirmed: false,
-        ConfirmationToken: crypto.randomUUID(),
+        ConfirmationToken: uuidv4(),
         CreatedAt: new Date(),
         UpdatedAt: new Date(),
       },
@@ -120,39 +121,78 @@ export async function POST(request: NextRequest) {
         Email: true,
         FullName: true,
         Role: true,
+        PhoneNumber: true,
       },
     });
 
-    console.log("User registered successfully:", user.Email);
-
-    return NextResponse.json(
+    // Create JWT token
+    const token = jwt.sign(
       {
-        message: "User registered successfully",
-        user: {
-          id: user.Id,
-          email: user.Email,
-          fullName: user.FullName,
-          role: user.Role,
-        },
+        userId: user.Id,
+        email: user.Email,
+        role: user.Role,
       },
-      { status: 201 }
+      process.env.JWT_SECRET || "",
+      { expiresIn: "24h" }
     );
-  } catch (error) {
-    console.error("Registration error:", error);
 
-    if (error instanceof z.ZodError) {
+    // Get client IP for logging
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
+
+    try {
+      // Create user session
+      await prisma.usersessions.create({
+        data: {
+          Id: uuidv4(),
+          UserId: user.Id,
+          Token: token,
+          ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          IpAddress: clientIp,
+          UserAgent: request.headers.get("user-agent") || "",
+        },
+      });
+
+      // Log registration
+      await prisma.userloginhistory.create({
+        data: {
+          Id: uuidv4(),
+          UserId: user.Id,
+          Successful: true,
+          IpAddress: clientIp,
+          UserAgent: request.headers.get("user-agent") || "",
+        },
+      });
+    } catch (loggingError: unknown) {
+      console.error("Error creating session or login history:", loggingError);
+      // Continue with the response even if logging fails
+    }
+
+    return NextResponse.json({
+      token,
+      user,
+    });
+  } catch (registrationError: unknown) {
+    console.error("Registration error:", registrationError);
+
+    if (registrationError instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: registrationError.errors[0].message },
         { status: 400 }
       );
     }
 
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (registrationError instanceof PrismaClientKnownRequestError) {
+      if (registrationError.code === "P2002") {
+        return NextResponse.json(
+          { error: "Email already registered" },
+          { status: 400 }
+        );
+      }
     }
 
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

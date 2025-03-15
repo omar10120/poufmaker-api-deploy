@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://poufmaker-api-deploy.vercel.app",
+      "url": "http://localhost:3000",
       "description": "Development server"
     }
   ],
