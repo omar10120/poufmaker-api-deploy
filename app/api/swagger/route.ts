@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import swaggerJsdoc from "swagger-jsdoc";
-import swaggerConfig from "./swaggerConfig";
+import options from "../../lib/swagger";
 
-export async function GET(req: NextRequest) {
-  const swaggerSpec = swaggerJsdoc(swaggerConfig);
+const specs = swaggerJsdoc(options);
 
-  return NextResponse.json(swaggerSpec);
+export async function GET() {
+  return NextResponse.json(specs);
 }
