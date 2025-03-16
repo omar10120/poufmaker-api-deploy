@@ -5,6 +5,13 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version',
+  'Access-Control-Allow-Credentials': 'true',
+};
+
 const registerSchema = z.object({
   Email: z.string().email("Invalid email format"),
   Password: z.string().min(8, "Password must be at least 8 characters"),
@@ -68,6 +75,8 @@ const registerSchema = z.object({
  *                       type: string
  *                     role:
  *                       type: string
+ *                 token:
+ *                   type: string
  *       400:
  *         description: Validation error or user already exists
  *         content:
@@ -79,6 +88,10 @@ const registerSchema = z.object({
  *                   type: string
  */
 export async function POST(request: NextRequest) {
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { headers: corsHeaders });
+  }
+
   try {
     const body = await request.json();
     
@@ -98,9 +111,7 @@ export async function POST(request: NextRequest) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...corsHeaders,
           },
         }
       );
@@ -188,9 +199,7 @@ export async function POST(request: NextRequest) {
       status: 201,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        ...corsHeaders,
       },
     });
   } catch (error) {
@@ -203,9 +212,7 @@ export async function POST(request: NextRequest) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...corsHeaders,
           },
         }
       );
@@ -217,22 +224,13 @@ export async function POST(request: NextRequest) {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          ...corsHeaders,
         },
       }
     );
   }
 }
 
-// Handle OPTIONS request for CORS
 export async function OPTIONS() {
-  return NextResponse.json({}, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+  return new NextResponse(null, { headers: corsHeaders });
 }

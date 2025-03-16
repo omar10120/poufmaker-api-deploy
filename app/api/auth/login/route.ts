@@ -5,6 +5,13 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version',
+  'Access-Control-Allow-Credentials': 'true',
+};
+
 const loginSchema = z.object({
   Email: z.string().email("Invalid email format"),
   Password: z.string().min(1, "Password is required"),
@@ -42,29 +49,45 @@ const loginSchema = z.object({
  *             schema:
  *               type: object
  *               properties:
- *                 token:
+ *                 message:
  *                   type: string
  *                 user:
  *                   type: object
  *                   properties:
- *                     Id:
+ *                     id:
  *                       type: string
- *                     Email:
+ *                     email:
  *                       type: string
- *                     FullName:
+ *                     fullName:
  *                       type: string
- *                     Role:
+ *                     role:
  *                       type: string
- *                     PhoneNumber:
- *                       type: string
+ *                 token:
+ *                   type: string
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  *       401:
  *         description: Invalid credentials
- *       500:
- *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  */
 export async function POST(request: NextRequest) {
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { headers: corsHeaders });
+  }
+
   try {
     const body = await request.json();
 
@@ -81,7 +104,6 @@ export async function POST(request: NextRequest) {
         FullName: true,
         PasswordHash: true,
         Role: true,
-        PhoneNumber: true,
       },
     });
 
@@ -92,6 +114,7 @@ export async function POST(request: NextRequest) {
           status: 401,
           headers: {
             'Content-Type': 'application/json',
+            ...corsHeaders,
           },
         }
       );
@@ -122,6 +145,7 @@ export async function POST(request: NextRequest) {
           status: 401,
           headers: {
             'Content-Type': 'application/json',
+            ...corsHeaders,
           },
         }
       );
@@ -174,32 +198,54 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const { PasswordHash, ...userWithoutPassword } = user;
-    return NextResponse.json(
-      {
-        token,
-        user: userWithoutPassword,
+    // Format response to match Swagger schema
+    const response = {
+      message: "Login successful",
+      user: {
+        id: user.Id,
+        email: user.Email,
+        fullName: user.FullName,
+        role: user.Role,
       },
-      { 
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      token,
+    };
+
+    return NextResponse.json(response, { 
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    });
   } catch (error) {
     console.error("Login error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
       );
     }
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
     );
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { headers: corsHeaders });
 }
