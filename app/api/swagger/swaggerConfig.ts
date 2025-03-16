@@ -76,11 +76,11 @@ const swaggerDefinition: SwaggerDefinition = {
       User: {
         type: "object",
         properties: {
-          id: { type: "string" },
-          email: { type: "string", format: "email" },
-          fullName: { type: "string" },
-          phoneNumber: { type: "string" },
-          role: { type: "string", enum: ["client", "admin", "upholsterer"] }
+          Id: { type: "string" },
+          Email: { type: "string", format: "email" },
+          FullName: { type: "string" },
+          PhoneNumber: { type: "string" },
+          Role: { type: "string", enum: ["client", "admin", "upholsterer"] }
         }
       },
       AuthResponse: {
