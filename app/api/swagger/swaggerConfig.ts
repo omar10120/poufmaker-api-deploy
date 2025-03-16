@@ -1,4 +1,5 @@
 import { SwaggerDefinition } from "swagger-jsdoc";
+import path from "path";
 
 const swaggerDefinition: SwaggerDefinition = {
   openapi: "3.0.0",
@@ -57,7 +58,7 @@ const swaggerDefinition: SwaggerDefinition = {
 
 const options = {
   definition: swaggerDefinition,
-  apis: ["./app/api/**/*.ts"], // Path to the API routes
+  apis: [path.join(process.cwd(), "app/api/**/*.ts")], // Absolute path to API routes
 };
 
 export default options;

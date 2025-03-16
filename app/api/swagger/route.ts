@@ -13,7 +13,25 @@ import swaggerConfig from "./swaggerConfig";
  */
 export async function GET(request: NextRequest) {
   try {
-    const swaggerSpec = swaggerJsdoc(swaggerConfig);
+    // Generate Swagger spec
+    const swaggerSpec = swaggerJsdoc({
+      ...swaggerConfig,
+      apis: swaggerConfig.apis.map(pattern => 
+        pattern.replace(/\\/g, '/') // Ensure forward slashes for glob patterns
+      ),
+    });
+
+    // Save spec to public directory for static serving
+    if (process.env.NODE_ENV === 'production') {
+      const fs = require('fs');
+      const path = require('path');
+      const publicDir = path.join(process.cwd(), 'public');
+      fs.writeFileSync(
+        path.join(publicDir, 'openapi.json'),
+        JSON.stringify(swaggerSpec, null, 2)
+      );
+    }
+
     return NextResponse.json(swaggerSpec, {
       headers: {
         "Content-Type": "application/json",
