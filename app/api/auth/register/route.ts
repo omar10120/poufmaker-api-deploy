@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const registerSchema = z.object({
   Email: z.string().email("Invalid email format"),
@@ -87,7 +86,6 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const existingUser = await prisma.users.findUnique({
       where: { Email },
-      select: { Id: true },
     });
 
     if (existingUser) {
@@ -140,59 +138,53 @@ export async function POST(request: NextRequest) {
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-    try {
-      // Create user session
-      await prisma.usersessions.create({
-        data: {
-          Id: uuidv4(),
-          UserId: user.Id,
-          Token: token,
-          ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-          IpAddress: clientIp,
-          UserAgent: request.headers.get("user-agent") || "",
-        },
-      });
-
-      // Log registration
-      await prisma.userloginhistory.create({
-        data: {
-          Id: uuidv4(),
-          UserId: user.Id,
-          Successful: true,
-          IpAddress: clientIp,
-          UserAgent: request.headers.get("user-agent") || "",
-        },
-      });
-    } catch (loggingError: unknown) {
-      console.error("Error creating session or login history:", loggingError);
-      // Continue with the response even if logging fails
-    }
-
-    return NextResponse.json({
-      token,
-      user,
+    // Create user session
+    await prisma.usersessions.create({
+      data: {
+        Id: uuidv4(),
+        UserId: user.Id,
+        Token: token,
+        ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        IpAddress: clientIp,
+        UserAgent: request.headers.get("user-agent") || "",
+      },
     });
-  } catch (registrationError: unknown) {
-    console.error("Registration error:", registrationError);
 
-    if (registrationError instanceof z.ZodError) {
+    // Log registration
+    await prisma.userloginhistory.create({
+      data: {
+        Id: uuidv4(),
+        UserId: user.Id,
+        Successful: true,
+        IpAddress: clientIp,
+        UserAgent: request.headers.get("user-agent") || "",
+      },
+    });
+
+    return NextResponse.json(
+      {
+        token,
+        user,
+      },
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: registrationError.errors[0].message },
+        { error: error.errors[0].message },
         { status: 400 }
       );
     }
 
-    if (registrationError instanceof PrismaClientKnownRequestError) {
-      if (registrationError.code === "P2002") {
-        return NextResponse.json(
-          { error: "Email already registered" },
-          { status: 400 }
-        );
-      }
-    }
-
     return NextResponse.json(
-      { error: "Internal server error !" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

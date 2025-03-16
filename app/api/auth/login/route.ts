@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/app/lib/prisma";
 import { z } from "zod";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 const loginSchema = z.object({
   Email: z.string().email("Invalid email format"),
@@ -88,8 +87,13 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
+        { error: "Invalid credentials" },
+        { 
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
     }
 
@@ -100,26 +104,26 @@ export async function POST(request: NextRequest) {
       const forwardedFor = request.headers.get("x-forwarded-for");
       const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-      try {
-        // Log failed login attempt
-        await prisma.userloginhistory.create({
-          data: {
-            Id: uuidv4(),
-            UserId: user.Id,
-            Successful: false,
-            FailureReason: "Invalid password",
-            IpAddress: clientIp,
-            UserAgent: request.headers.get("user-agent") || "",
-          },
-        });
-      } catch (loggingError: unknown) {
-        console.error("Error logging failed login attempt:", loggingError);
-        // Continue with the response even if logging fails
-      }
+      // Log failed login attempt
+      await prisma.userloginhistory.create({
+        data: {
+          Id: uuidv4(),
+          UserId: user.Id,
+          Successful: false,
+          FailureReason: "Invalid password",
+          IpAddress: clientIp,
+          UserAgent: request.headers.get("user-agent") || "",
+        },
+      });
 
       return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
+        { error: "Invalid credentials" },
+        { 
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
     }
 
@@ -138,59 +142,58 @@ export async function POST(request: NextRequest) {
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-    try {
-      // Create user session
-      await prisma.usersessions.create({
-        data: {
-          Id: uuidv4(),
-          UserId: user.Id,
-          Token: token,
-          ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-          IpAddress: clientIp,
-          UserAgent: request.headers.get("user-agent") || "",
-        },
-      });
+    // Create user session
+    await prisma.usersessions.create({
+      data: {
+        Id: uuidv4(),
+        UserId: user.Id,
+        Token: token,
+        ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        IpAddress: clientIp,
+        UserAgent: request.headers.get("user-agent") || "",
+      },
+    });
 
-      // Log successful login
-      await prisma.userloginhistory.create({
-        data: {
-          Id: uuidv4(),
-          UserId: user.Id,
-          Successful: true,
-          IpAddress: clientIp,
-          UserAgent: request.headers.get("user-agent") || "",
-        },
-      });
+    // Log successful login
+    await prisma.userloginhistory.create({
+      data: {
+        Id: uuidv4(),
+        UserId: user.Id,
+        Successful: true,
+        IpAddress: clientIp,
+        UserAgent: request.headers.get("user-agent") || "",
+      },
+    });
 
-      // Update last login date
-      await prisma.users.update({
-        where: { Id: user.Id },
-        data: { LastLoginDate: new Date() },
-      });
-    } catch (loggingError: unknown) {
-      console.error("Error creating session or updating login info:", loggingError);
-      // Continue with the response even if logging fails
-    }
+    // Update last login date
+    await prisma.users.update({
+      where: { Id: user.Id },
+      data: { 
+        LastLoginDate: new Date(),
+        UpdatedAt: new Date(),
+      },
+    });
 
     const { PasswordHash, ...userWithoutPassword } = user;
-    return NextResponse.json({
-      token,
-      user: userWithoutPassword,
-    });
-  } catch (loginError: unknown) {
-    console.error("Login error:", loginError);
+    return NextResponse.json(
+      {
+        token,
+        user: userWithoutPassword,
+      },
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Login error:", error);
 
-    if (loginError instanceof z.ZodError) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: loginError.errors[0].message },
+        { error: error.errors[0].message },
         { status: 400 }
-      );
-    }
-
-    if (loginError instanceof PrismaClientKnownRequestError) {
-      return NextResponse.json(
-        { error: "Database error occurred" },
-        { status: 500 }
       );
     }
 
