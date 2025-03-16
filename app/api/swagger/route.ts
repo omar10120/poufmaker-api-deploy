@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerConfig from "./swaggerConfig";
+import fs from "fs";
+import path from "path";
 
 /**
  * @swagger
@@ -21,16 +23,12 @@ export async function GET(request: NextRequest) {
       ),
     });
 
-    // Save spec to public directory for static serving
-    if (process.env.NODE_ENV === 'production') {
-      const fs = require('fs');
-      const path = require('path');
-      const publicDir = path.join(process.cwd(), 'public');
-      fs.writeFileSync(
-        path.join(publicDir, 'openapi.json'),
-        JSON.stringify(swaggerSpec, null, 2)
-      );
-    }
+    // Always save spec to public directory
+    const publicDir = path.join(process.cwd(), 'public');
+    fs.writeFileSync(
+      path.join(publicDir, 'openapi.json'),
+      JSON.stringify(swaggerSpec, null, 2)
+    );
 
     return NextResponse.json(swaggerSpec, {
       headers: {
