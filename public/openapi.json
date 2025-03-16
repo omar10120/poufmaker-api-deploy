@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
+      "url": "https://poufmaker-api-deploy.vercel.app",
       "description": "API Server"
     }
   ],
@@ -189,11 +189,13 @@
                 "properties": {
                   "Email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "example": "test.user@example.com"
                   },
                   "Password": {
                     "type": "string",
-                    "format": "password"
+                    "format": "password",
+                    "example": "Test@123456"
                   }
                 }
               }
@@ -209,27 +211,33 @@
                   "type": "object",
                   "properties": {
                     "message": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "Login successful"
                     },
                     "user": {
                       "type": "object",
                       "properties": {
-                        "id": {
-                          "type": "string"
+                        "Id": {
+                          "type": "string",
+                          "example": "550e8400-e29b-41d4-a716-446655440000"
                         },
-                        "email": {
-                          "type": "string"
+                        "Email": {
+                          "type": "string",
+                          "example": "test.user@example.com"
                         },
-                        "fullName": {
-                          "type": "string"
+                        "FullName": {
+                          "type": "string",
+                          "example": "Test User"
                         },
-                        "role": {
-                          "type": "string"
+                        "Role": {
+                          "type": "string",
+                          "example": "client"
                         }
                       }
                     },
                     "token": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                     }
                   }
                 }
@@ -244,7 +252,8 @@
                   "type": "object",
                   "properties": {
                     "error": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "Invalid email format"
                     }
                   }
                 }
@@ -259,7 +268,8 @@
                   "type": "object",
                   "properties": {
                     "error": {
-                      "type": "string"
+                      "type": "string",
+                      "example": "Invalid credentials"
                     }
                   }
                 }
