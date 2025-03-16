@@ -48,32 +48,35 @@ const registerSchema = z.object({
  *                 enum: [client, admin, upholsterer]
  *                 default: client
  *     responses:
- *       200:
- *         description: User successfully registered
+ *       201:
+ *         description: User registered successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 token:
+ *                 message:
  *                   type: string
  *                 user:
  *                   type: object
  *                   properties:
- *                     Id:
+ *                     id:
  *                       type: string
- *                     Email:
+ *                     email:
  *                       type: string
- *                     FullName:
+ *                     fullName:
  *                       type: string
- *                     Role:
- *                       type: string
- *                     PhoneNumber:
+ *                     role:
  *                       type: string
  *       400:
- *         description: Invalid input or email already exists
- *       500:
- *         description: Server error
+ *         description: Validation error or user already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
  */
 export async function POST(request: NextRequest) {
   try {
@@ -91,7 +94,15 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         { error: "Email already registered" },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
@@ -161,31 +172,67 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(
-      {
-        token,
-        user,
+    // Format response to match Swagger schema
+    const response = {
+      message: "User registered successfully",
+      user: {
+        id: user.Id,
+        email: user.Email,
+        fullName: user.FullName,
+        role: user.Role,
       },
-      { 
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      token,
+    };
+
+    return NextResponse.json(response, { 
+      status: 201,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
   } catch (error) {
     console.error("Registration error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
       );
     }
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
     );
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
