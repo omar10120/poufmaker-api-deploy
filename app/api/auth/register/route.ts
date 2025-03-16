@@ -12,6 +12,7 @@ const corsHeaders = {
   'Access-Control-Allow-Credentials': 'true',
 };
 
+// Update schema to match the request format
 const registerSchema = z.object({
   Email: z.string().email("Invalid email format"),
   Password: z.string().min(8, "Password must be at least 8 characters"),
@@ -94,9 +95,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    console.log("Received request body:", body); // Debug log
+
+    // Transform body to match schema if needed
+    const transformedBody = {
+      Email: body.Email || body.email,
+      Password: body.Password || body.password,
+      FullName: body.FullName || body.fullName,
+      PhoneNumber: body.PhoneNumber || body.phoneNumber,
+      Role: body.Role || body.role || "client",
+    };
+
+    console.log("Transformed body:", transformedBody); // Debug log
     
     // Validate input
-    const validatedData = registerSchema.parse(body);
+    const validatedData = registerSchema.parse(transformedBody);
     const { Email, Password, FullName, PhoneNumber, Role } = validatedData;
 
     // Check if user already exists

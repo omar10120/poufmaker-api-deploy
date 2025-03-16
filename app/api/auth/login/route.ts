@@ -90,9 +90,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    console.log("Received login body:", body); // Debug log
+
+    // Transform body to match schema if needed
+    const transformedBody = {
+      Email: body.Email || body.email,
+      Password: body.Password || body.password,
+    };
+
+    console.log("Transformed login body:", transformedBody); // Debug log
 
     // Validate input
-    const validatedData = loginSchema.parse(body);
+    const validatedData = loginSchema.parse(transformedBody);
     const { Email, Password } = validatedData;
 
     // Find user by email
