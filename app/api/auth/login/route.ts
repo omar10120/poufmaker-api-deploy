@@ -12,9 +12,10 @@ const corsHeaders = {
   'Access-Control-Allow-Credentials': 'true',
 };
 
+// Update schema to match the request format
 const loginSchema = z.object({
   Email: z.string().email("Invalid email format"),
-  Password: z.string().min(1, "Password is required"),
+  Password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 /**
@@ -38,9 +39,11 @@ const loginSchema = z.object({
  *               Email:
  *                 type: string
  *                 format: email
+ *                 example: "test.user@example.com"
  *               Password:
  *                 type: string
  *                 format: password
+ *                 example: "Test@123456"
  *     responses:
  *       200:
  *         description: Login successful
@@ -51,19 +54,25 @@ const loginSchema = z.object({
  *               properties:
  *                 message:
  *                   type: string
+ *                   example: "Login successful"
  *                 user:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     Id:
  *                       type: string
- *                     email:
+ *                       example: "550e8400-e29b-41d4-a716-446655440000"
+ *                     Email:
  *                       type: string
- *                     fullName:
+ *                       example: "test.user@example.com"
+ *                     FullName:
  *                       type: string
- *                     role:
+ *                       example: "Test User"
+ *                     Role:
  *                       type: string
+ *                       example: "client"
  *                 token:
  *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
  *         description: Invalid input
  *         content:
@@ -73,6 +82,7 @@ const loginSchema = z.object({
  *               properties:
  *                 error:
  *                   type: string
+ *                   example: "Invalid email format"
  *       401:
  *         description: Invalid credentials
  *         content:
@@ -82,6 +92,7 @@ const loginSchema = z.object({
  *               properties:
  *                 error:
  *                   type: string
+ *                   example: "Invalid credentials"
  */
 export async function POST(request: NextRequest) {
   if (request.method === 'OPTIONS') {
@@ -90,7 +101,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    console.log("Received login body:", body); // Debug log
+    console.log("Received login body:", body);
 
     // Transform body to match schema if needed
     const transformedBody = {
@@ -98,13 +109,13 @@ export async function POST(request: NextRequest) {
       Password: body.Password || body.password,
     };
 
-    console.log("Transformed login body:", transformedBody); // Debug log
-
+    console.log("Transformed login body:", transformedBody);
+    
     // Validate input
     const validatedData = loginSchema.parse(transformedBody);
     const { Email, Password } = validatedData;
 
-    // Find user by email
+    // Find user
     const user = await prisma.users.findUnique({
       where: { Email },
       select: {
@@ -132,22 +143,6 @@ export async function POST(request: NextRequest) {
     // Verify password
     const validPassword = await bcrypt.compare(Password, user.PasswordHash);
     if (!validPassword) {
-      // Get client IP from headers
-      const forwardedFor = request.headers.get("x-forwarded-for");
-      const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
-
-      // Log failed login attempt
-      await prisma.userloginhistory.create({
-        data: {
-          Id: uuidv4(),
-          UserId: user.Id,
-          Successful: false,
-          FailureReason: "Invalid password",
-          IpAddress: clientIp,
-          UserAgent: request.headers.get("user-agent") || "",
-        },
-      });
-
       return NextResponse.json(
         { error: "Invalid credentials" },
         { 
@@ -160,28 +155,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create JWT token
+    // Create JWT token with shorter expiration and minimal payload
     const token = jwt.sign(
       {
-        userId: user.Id,
-        email: user.Email,
+        sub: user.Id,
         role: user.Role,
       },
       process.env.JWT_SECRET || "",
-      { expiresIn: "24h" }
+      { expiresIn: "1h" }
     );
 
     // Get client IP for logging
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-    // Create user session
+    // Create user session with a shortened token
+    const sessionToken = token.substring(0, 250); // Ensure it fits in VARCHAR(255)
     await prisma.usersessions.create({
       data: {
         Id: uuidv4(),
         UserId: user.Id,
-        Token: token,
-        ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        Token: sessionToken,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         IpAddress: clientIp,
         UserAgent: request.headers.get("user-agent") || "",
       },
@@ -201,20 +196,17 @@ export async function POST(request: NextRequest) {
     // Update last login date
     await prisma.users.update({
       where: { Id: user.Id },
-      data: { 
-        LastLoginDate: new Date(),
-        UpdatedAt: new Date(),
-      },
+      data: { LastLoginDate: new Date() },
     });
 
     // Format response to match Swagger schema
     const response = {
       message: "Login successful",
       user: {
-        id: user.Id,
-        email: user.Email,
-        fullName: user.FullName,
-        role: user.Role,
+        Id: user.Id,
+        Email: user.Email,
+        FullName: user.FullName,
+        Role: user.Role,
       },
       token,
     };

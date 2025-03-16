@@ -158,28 +158,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create JWT token
+    // Create JWT token with shorter expiration and minimal payload
     const token = jwt.sign(
       {
-        userId: user.Id,
-        email: user.Email,
+        sub: user.Id,
         role: user.Role,
       },
       process.env.JWT_SECRET || "",
-      { expiresIn: "24h" }
+      { expiresIn: "1h" }
     );
 
     // Get client IP for logging
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
-    // Create user session
+    // Create user session with a shortened token
+    const sessionToken = token.substring(0, 250); // Ensure it fits in VARCHAR(255)
     await prisma.usersessions.create({
       data: {
         Id: uuidv4(),
         UserId: user.Id,
-        Token: token,
-        ExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        Token: sessionToken,
+        ExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         IpAddress: clientIp,
         UserAgent: request.headers.get("user-agent") || "",
       },
