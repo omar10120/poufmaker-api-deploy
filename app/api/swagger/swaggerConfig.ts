@@ -83,6 +83,48 @@ const swaggerDefinition: SwaggerDefinition = {
           Role: { type: "string", enum: ["client", "admin", "upholsterer"] }
         }
       },
+      Product: {
+        type: "object",
+        properties: {
+          Id: { type: "string", format: "uuid" },
+          Title: { type: "string" },
+          Description: { type: "string" },
+          Price: { type: "number", format: "float" },
+          ImageUrl: { type: "string", format: "uri" },
+          Status: { 
+            type: "string", 
+            enum: ["ai-generated", "pending", "approved", "rejected"],
+            default: "ai-generated"
+          },
+          CreatorId: { type: "string", format: "uuid" },
+          ManufacturerId: { type: "string", format: "uuid" },
+          CreatedAt: { type: "string", format: "date-time" },
+          UpdatedAt: { type: "string", format: "date-time" },
+          users_products_CreatorIdTousers: { $ref: "#/components/schemas/User" },
+          users_products_ManufacturerIdTousers: { $ref: "#/components/schemas/User" },
+          bids: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Bid" }
+          }
+        }
+      },
+      Bid: {
+        type: "object",
+        properties: {
+          Id: { type: "string", format: "uuid" },
+          ProductId: { type: "string", format: "uuid" },
+          UpholstererId: { type: "string", format: "uuid" },
+          Amount: { type: "number", format: "float" },
+          Status: { 
+            type: "string",
+            enum: ["pending", "accepted", "rejected"],
+            default: "pending"
+          },
+          Notes: { type: "string" },
+          CreatedAt: { type: "string", format: "date-time" },
+          UpdatedAt: { type: "string", format: "date-time" }
+        }
+      },
       AuthResponse: {
         type: "object",
         properties: {
@@ -128,6 +170,16 @@ const swaggerDefinition: SwaggerDefinition = {
   security: [
     {
       bearerAuth: []
+    }
+  ],
+  tags: [
+    {
+      name: "Auth",
+      description: "Authentication endpoints"
+    },
+    {
+      name: "Products",
+      description: "Product management endpoints"
     }
   ]
 };
