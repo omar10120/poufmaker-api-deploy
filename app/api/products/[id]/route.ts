@@ -155,7 +155,7 @@ async function verifyToken(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
@@ -167,7 +167,7 @@ export async function GET(
 
     // Get product
     const product = await prisma.products.findUnique({
-      where: { Id: params.id },
+      where: { Id: context.params.id },
       include: {
         users_products_CreatorIdTousers: {
           select: {
@@ -238,7 +238,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
@@ -250,7 +250,7 @@ export async function PUT(
 
     // Get existing product
     const existingProduct = await prisma.products.findUnique({
-      where: { Id: params.id },
+      where: { Id: context.params.id },
     });
 
     if (!existingProduct) {
@@ -286,7 +286,7 @@ export async function PUT(
 
     // Update product
     const updatedProduct = await prisma.products.update({
-      where: { Id: params.id },
+      where: { Id: context.params.id },
       data: {
         ...validatedData,
         UpdatedAt: new Date(),
@@ -360,7 +360,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
@@ -372,7 +372,7 @@ export async function DELETE(
 
     // Get existing product
     const existingProduct = await prisma.products.findUnique({
-      where: { Id: params.id },
+      where: { Id: context.params.id },
     });
 
     if (!existingProduct) {
@@ -404,7 +404,7 @@ export async function DELETE(
 
     // Delete product
     await prisma.products.delete({
-      where: { Id: params.id },
+      where: { Id: context.params.id },
     });
 
     return NextResponse.json(

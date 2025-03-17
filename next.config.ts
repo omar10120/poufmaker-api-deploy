@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  swcMinify: true,
   reactStrictMode: true,
   env: {
     DATABASE_URL: process.env.DATABASE_URL,

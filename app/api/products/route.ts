@@ -112,58 +112,7 @@ async function verifyToken(request: NextRequest) {
  *         description: Unauthorized
  *       500:
  *         description: Internal server error
- *   post:
- *     tags:
- *       - Products
- *     summary: Create product
- *     description: Create a new product
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - Title
- *             properties:
- *               Title:
- *                 type: string
- *                 example: "Modern Pouf"
- *               Description:
- *                 type: string
- *                 example: "A comfortable modern pouf with premium fabric"
- *               Price:
- *                 type: number
- *                 format: float
- *                 example: 99.99
- *               ImageUrl:
- *                 type: string
- *                 format: uri
- *                 example: "https://example.com/pouf.jpg"
- *               Status:
- *                 type: string
- *                 enum: [ai-generated, pending, approved, rejected]
- *                 default: ai-generated
- *               ManufacturerId:
- *                 type: string
- *                 format: uuid
- *     responses:
- *       201:
- *         description: Product created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
  */
-
 export async function GET(request: NextRequest) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
@@ -261,6 +210,60 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/products:
+ *   post:
+ *     tags:
+ *       - Products
+ *     summary: Create product
+ *     description: Create a new product
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - Title
+ *             properties:
+ *               Title:
+ *                 type: string
+ *                 example: "Modern Pouf"
+ *               Description:
+ *                 type: string
+ *                 example: "A comfortable modern pouf with premium fabric"
+ *               Price:
+ *                 type: number
+ *                 format: float
+ *                 example: 99.99
+ *               ImageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://example.com/pouf.jpg"
+ *               Status:
+ *                 type: string
+ *                 enum: [ai-generated, pending, approved, rejected]
+ *                 default: ai-generated
+ *               ManufacturerId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(request: NextRequest) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });

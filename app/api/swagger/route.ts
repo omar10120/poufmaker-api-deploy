@@ -15,30 +15,15 @@ import path from "path";
  */
 export async function GET(request: NextRequest) {
   try {
-    // In production, use the pre-generated spec
-    if (process.env.NODE_ENV === 'production') {
-      const specPath = path.join(process.cwd(), 'public', 'openapi.json');
-      if (fs.existsSync(specPath)) {
-        const spec = JSON.parse(fs.readFileSync(specPath, 'utf-8'));
-        return NextResponse.json(spec, {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Cache-Control": "no-store, max-age=0",
-          },
-        });
-      }
-    }
-
-    // Generate Swagger spec (for development)
+    // Generate Swagger spec
     const swaggerSpec = swaggerJsdoc({
       ...swaggerConfig,
-      apis: [
-        path.join(process.cwd(), 'app/api/**/*.ts').replace(/\\/g, '/'),
-      ],
+      apis: swaggerConfig.apis.map(pattern => 
+        pattern.replace(/\\/g, '/') // Ensure forward slashes for glob patterns
+      ),
     });
 
-    // Save spec to public directory
+    // Always save spec to public directory
     const publicDir = path.join(process.cwd(), 'public');
     fs.writeFileSync(
       path.join(publicDir, 'openapi.json'),
