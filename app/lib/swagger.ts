@@ -1,4 +1,5 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import path from "path";
 
 const swaggerDefinition = {
   openapi: "3.0.0",
@@ -17,7 +18,7 @@ const swaggerDefinition = {
 
 const options: swaggerJsdoc.Options = {
   definition: swaggerDefinition,
-  apis: ["./app/api/**/*.ts"], // Updated path to match App Router structure
+  apis: [path.join(process.cwd(), "app/api/**/*.ts")], // Using absolute path
 };
 
 export default options;
