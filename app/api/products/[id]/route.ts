@@ -35,128 +35,11 @@ async function verifyToken(request: NextRequest) {
   }
 }
 
-/**
- * @swagger
- * /api/products/{id}:
- *   get:
- *     tags:
- *       - Products
- *     summary: Get product details
- *     description: Get detailed information about a specific product
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *     responses:
- *       200:
- *         description: Product details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Product not found
- *       500:
- *         description: Internal server error
- *   put:
- *     tags:
- *       - Products
- *     summary: Update product
- *     description: Update an existing product
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               Title:
- *                 type: string
- *                 example: "Updated Modern Pouf"
- *               Description:
- *                 type: string
- *                 example: "An updated comfortable modern pouf"
- *               Price:
- *                 type: number
- *                 format: float
- *                 example: 129.99
- *               ImageUrl:
- *                 type: string
- *                 format: uri
- *                 example: "https://example.com/updated-pouf.jpg"
- *               Status:
- *                 type: string
- *                 enum: [ai-generated, pending, approved, rejected]
- *               ManufacturerId:
- *                 type: string
- *                 format: uuid
- *     responses:
- *       200:
- *         description: Product updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - user does not have permission
- *       404:
- *         description: Product not found
- *       500:
- *         description: Internal server error
- *   delete:
- *     tags:
- *       - Products
- *     summary: Delete product
- *     description: Delete an existing product
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *     responses:
- *       200:
- *         description: Product deleted successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - user does not have permission
- *       404:
- *         description: Product not found
- *       500:
- *         description: Internal server error
- */
+type Context = {
+  params: Promise<{ id: string }>;
+};
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: Context) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
   }
@@ -164,10 +47,13 @@ export async function GET(
   try {
     // Verify token
     await verifyToken(request);
+    
+    // Get params
+    const { id } = await context.params;
 
     // Get product
     const product = await prisma.products.findUnique({
-      where: { Id: context.params.id },
+      where: { Id: id },
       include: {
         users_products_CreatorIdTousers: {
           select: {
@@ -236,10 +122,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, context: Context) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
   }
@@ -247,10 +130,13 @@ export async function PUT(
   try {
     // Verify token
     const decoded = await verifyToken(request);
+    
+    // Get params
+    const { id } = await context.params;
 
     // Get existing product
     const existingProduct = await prisma.products.findUnique({
-      where: { Id: context.params.id },
+      where: { Id: id },
     });
 
     if (!existingProduct) {
@@ -286,7 +172,7 @@ export async function PUT(
 
     // Update product
     const updatedProduct = await prisma.products.update({
-      where: { Id: context.params.id },
+      where: { Id: id },
       data: {
         ...validatedData,
         UpdatedAt: new Date(),
@@ -358,10 +244,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, context: Context) {
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { headers: corsHeaders });
   }
@@ -369,10 +252,13 @@ export async function DELETE(
   try {
     // Verify token
     const decoded = await verifyToken(request);
+    
+    // Get params
+    const { id } = await context.params;
 
     // Get existing product
     const existingProduct = await prisma.products.findUnique({
-      where: { Id: context.params.id },
+      where: { Id: id },
     });
 
     if (!existingProduct) {
@@ -404,7 +290,7 @@ export async function DELETE(
 
     // Delete product
     await prisma.products.delete({
-      where: { Id: context.params.id },
+      where: { Id: id },
     });
 
     return NextResponse.json(
